@@ -22,8 +22,8 @@ build_kernel() {
 
     export ARCH=arm64
     export PATH="$KERNEL_DIR/llvm-21/bin:$PATH"
-
-    BUILD_VAR="-j$(nproc) -C $KERNEL_DIR O=$KERNEL_DIR/out ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- LLVM=1 LLVM_IAS=1"
+    MAKE_JOBS="${4:-$(nproc)}"
+    BUILD_VAR="-j${MAKE_JOBS} -C $KERNEL_DIR O=$KERNEL_DIR/out ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- LLVM=1 LLVM_IAS=1"
 
     cat arch/arm64/configs/vendor/kona-sec-perf_defconfig \
         arch/arm64/configs/vendor/samsung/$DEVICE.config > arch/arm64/configs/temp_defconfig
