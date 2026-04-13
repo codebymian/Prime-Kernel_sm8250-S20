@@ -12,6 +12,11 @@ on:
         description: 'Changelog'
         type: string
         required: false
+      make_jobs:
+        description: 'Number of parallel make jobs'
+        type: number
+        required: false
+        default: 4   # safer default for GitHub runners
 
 jobs:
   prepare:
@@ -60,7 +65,7 @@ jobs:
       - name: Build kernel
         run: |
           chmod +x build_prime.sh
-          bash build_prime.sh "${{ matrix.device }}"
+          bash build_prime.sh "${{ matrix.device }}" "" "" ${{ github.event.inputs.make_jobs }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v5
