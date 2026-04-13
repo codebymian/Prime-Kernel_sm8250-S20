@@ -35,7 +35,7 @@ jobs:
     needs: prepare
     strategy:
       matrix:
-        device: [ y2q, x1q, c1q, c2q, z3q ]
+        device: [ y2q]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
