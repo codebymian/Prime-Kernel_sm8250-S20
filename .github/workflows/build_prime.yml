@@ -30,8 +30,7 @@ jobs:
     needs: prepare
     strategy:
       matrix:
-        device: [r8q, y2q]
-
+        device: [ y2q, x1q, c1q, c2q, z3q ]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
@@ -80,11 +79,6 @@ jobs:
         with:
           path: artifacts/
 
-      - name: Move boot.img and dtbo.img
-        run: |
-          mv artifacts/boot.img boot.img
-          mv artifacts/dtbo.img dtbo.img
-
       - name: Zip build artifacts
         run: |
           cd artifacts
@@ -94,3 +88,14 @@ jobs:
               zip -r "../${dir}.zip" .
             )
           done
+
+  release:
+    runs-on: ubuntu-latest
+    needs: package
+    if: ${{ github.event.inputs.release == 'true' }}
+    steps:
+      - name: Upload release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*.zip
+          body: ${{ github.event.inputs.changelog }}
