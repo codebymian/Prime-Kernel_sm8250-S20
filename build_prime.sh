@@ -17,7 +17,7 @@ build_kernel() {
 
     cat arch/arm64/configs/vendor/kona-sec-perf_defconfig arch/arm64/configs/vendor/samsung/y2q.config \
         arch/arm64/configs/ksu.config arch/arm64/configs/vendor/not/no_werror.config.config \
-        arch/arm64/configs/vendor/not/cnss.config arch/arm64/configs/vendor/debugfs.config > arch/arm64/configs/temp_defconfig
+        arch/arm64/configs/vendor/not/cnss.config arch/arm64/configs/vendor/debugfs.config  arch/arm64/configs/vendor/not/no_qcacld.config> arch/arm64/configs/temp_defconfig
 
     echo "
 CONFIG_THINLTO=y
