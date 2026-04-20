@@ -19,15 +19,22 @@ jobs:
 
       - name: Install build tools
         run: |
+          sudo apt-get update
           sudo apt-get install -y \
+            bc \
+            bison \
             build-essential \
-            git \
             curl \
+            dwarves \
+            flex \
+            git \
+            libelf-dev \
+            libssl-dev \
+            python3 \
             unzip \
             wget \
             zip \
             zstd
-            python3  # mkbootimg.py requires Python
 
       - name: Download latest Google clang
         run: |
