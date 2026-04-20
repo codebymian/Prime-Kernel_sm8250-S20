@@ -135,7 +135,9 @@ export PROJECT_NAME="${MODEL}"
 [ -z "${PLATFORM_VERSION}" ] && export PLATFORM_VERSION=11
 
 # Target build parameters
-KERNEL_DEFCONFIG="vendor/${CHIPSET_NAME}-perf_defconfig"
+# Use kona-sec-perf: includes CONFIG_SEC_PCIE* required for Samsung PCIe WLAN
+# (e.g. BCM4375). Plain kona-perf lacks SEC_PCIE and breaks WLAN on many devices.
+KERNEL_DEFCONFIG="vendor/${CHIPSET_NAME}-sec-perf_defconfig"
 COMMON_DEFCONFIG="vendor/samsung/kona-sec-common.config"
 
 if [ -n "$REGION" ]; then
