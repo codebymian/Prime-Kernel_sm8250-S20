@@ -1,5 +1,7 @@
 #!/bin/sh
 
+export DEVICE=$1
+
 build_kernel() {
     echo "-----------------------------------------------"
     echo "Beginning kernel compilation..."
@@ -44,7 +46,7 @@ build_dtbo() {
     echo "-----------------------------------------------"
     echo "Building dtbo.img..."
     echo "-----------------------------------------------"
-    DTBO_FILES=$(find $(pwd)/out/arch/arm64/boot/dts/samsung/r8q -name kona-sec-r8q-*.dtbo)
+    DTBO_FILES=$(find $(pwd)/out/arch/arm64/boot/dts/samsung/${DEVICE} -name kona-sec-${DEVICE}-*.dtbo)
     $(pwd)/tools/mkdtimg create $(pwd)/out/dtbo.img --page_size=4096 ${DTBO_FILES}
 
     mv $(pwd)/out/dtbo.img dtbo.img
