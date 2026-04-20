@@ -63,7 +63,7 @@ prepare_ak3() {
 
     sed -i "s/^device\.name1=.*/device.name1=${DEVICE}/" anykernel.sh
 
-    ZIP_NAME="PrimeKernel-${DEVICE}.zip"
+    ZIP_NAME="Astro-Kernel-${DEVICE}.zip"
     zip -r "../${ZIP_NAME}" *
 
     cd "$KERNEL_DIR"
