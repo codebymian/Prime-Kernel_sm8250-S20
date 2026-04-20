@@ -1,92 +1,121 @@
 #!/bin/sh
+set -e
 
+KERNEL_DIR=$(pwd)
+DEVICE="$1"
+
+if [ -z "$DEVICE" ]; then
+    echo "Usage: $0 <device>"
+    echo "Supported: c1q c2q x1q y2q z3q"
+    exit 1
+fi
+
+OUT_DIR="$KERNEL_DIR/out"
+IMG_DIR="$KERNEL_DIR/images"
+
+mkdir -p "$OUT_DIR" "$IMG_DIR"
+
+# -------------------------
+#  BUILD KERNEL
+# -------------------------
 build_kernel() {
     echo "-----------------------------------------------"
-    echo "Beginning kernel compilation..."
+    echo "Building kernel for $DEVICE..."
     echo "-----------------------------------------------"
 
     export ARCH=arm64
-    mkdir out
+    export PATH="$KERNEL_DIR/llvm-21/bin:$PATH"
 
-    export PATH=$(pwd)/llvm-21/bin:$PATH
+    BUILD_VAR="-j$(nproc) -C $KERNEL_DIR O=$OUT_DIR ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- LLVM=1 LLVM_IAS=1"
 
-    BUILD_VAR="-j$(nproc) -C $(pwd) O=$(pwd)/out ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- LLVM=1 LLVM_IAS=1"
+    cat \
+        arch/arm64/configs/vendor/kona-sec-perf_defconfig \
+        arch/arm64/configs/vendor/samsung/${DEVICE}.config \
+        arch/arm64/configs/ksu.config \
+        arch/arm64/configs/vendor/not/no_werror.config \
+        arch/arm64/configs/vendor/debugfs.config \
+        > arch/arm64/configs/temp_defconfig
 
-    # NO_QCACLD, CNSS_WORKAROUND, SEC_PCIE*: see vendor/samsung/${DEVICE}.config
-    cat arch/arm64/configs/vendor/kona-sec-perf_defconfig arch/arm64/configs/vendor/samsung/${DEVICE}.config \
-        arch/arm64/configs/ksu.config arch/arm64/configs/vendor/not/no_werror.config \
-        arch/arm64/configs/vendor/debugfs.config > arch/arm64/configs/temp_defconfig
-
-    echo "
-    CONFIG_THINLTO=y
-    # CONFIG_LTO_NONE is not set
-    CONFIG_LTO_CLANG=y
-    " >> arch/arm64/configs/temp_defconfig
+    cat >> arch/arm64/configs/temp_defconfig << 'EOF'
+CONFIG_THINLTO=y
+CONFIG_LTO_CLANG=y
+EOF
 
     make $BUILD_VAR temp_defconfig
+    make $BUILD_VAR Image
     rm arch/arm64/configs/temp_defconfig
 }
 
+# -------------------------
+#  BUILD DTB
+# -------------------------
 build_dtb() {
     echo "-----------------------------------------------"
     echo "Building dtb..."
     echo "-----------------------------------------------"
-    make $BUILD_VAR
+
+    BUILD_VAR="-j$(nproc) -C $KERNEL_DIR O=$OUT_DIR ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- LLVM=1 LLVM_IAS=1"
+
     make $BUILD_VAR dtbs
 
-    cat "$(pwd)/out/arch/arm64/boot/dts/vendor/qcom/kona.dtb" \
-        "$(pwd)/out/arch/arm64/boot/dts/vendor/qcom/kona-v2.dtb" \
-        "$(pwd)/out/arch/arm64/boot/dts/vendor/qcom/kona-v2.1.dtb" \
-        > "$(pwd)/out/arch/arm64/boot/dts/dtb"
+    cat \
+        "$OUT_DIR/arch/arm64/boot/dts/samsung/kona.dtb" \
+        "$OUT_DIR/arch/arm64/boot/dts/samsung/kona-v2.dtb" \
+        "$OUT_DIR/arch/arm64/boot/dts/samsung/kona-v2.1.dtb" \
+        > "$OUT_DIR/arch/arm64/boot/dts/dtb"
 }
 
+# -------------------------
+#  BUILD DTBO
+# -------------------------
 build_dtbo() {
     echo "-----------------------------------------------"
     echo "Building dtbo.img..."
     echo "-----------------------------------------------"
-    DTBO_FILES=$(find $(pwd)/out/arch/arm64/boot/dts/samsung/r8q -name kona-sec-r8q-*.dtbo)
-    $(pwd)/tools/mkdtimg create $(pwd)/out/dtbo.img --page_size=4096 ${DTBO_FILES}
 
-    mv $(pwd)/out/dtbo.img dtbo.img
+    DTBO_DIR="$OUT_DIR/arch/arm64/boot/dts/samsung/$DEVICE"
+    DTBO_FILES=$(find "$DTBO_DIR" -name "kona-sec-${DEVICE}_*.dtbo")
+
+    if [ -z "$DTBO_FILES" ]; then
+        echo "ERROR: No DTBO files found for $DEVICE"
+        exit 1
+    fi
+
+    "$KERNEL_DIR/tools/mkdtimg" create "$OUT_DIR/dtbo.img" --page_size=4096 $DTBO_FILES
+    cp "$OUT_DIR/dtbo.img" "$IMG_DIR/dtbo.img"
 }
 
+# -------------------------
+#  BUILD BOOT.IMG
+# -------------------------
 build_boot() {
     echo "-----------------------------------------------"
     echo "Building boot.img..."
     echo "-----------------------------------------------"
-    MKBOOTIMG="$(pwd)/mkbootimg/mkbootimg.py"
-    OUT_KERNEL="$(pwd)/out/arch/arm64/boot/Image"
-    DTB_OUT="$(pwd)/out/arch/arm64/boot/dts/dtb"
-    CMDLINE="console=null androidboot.hardware=qcom androidboot.memcg=1 lpm_levels.sleep_disabled=1 video=vfb:640x400,bpp=32,memsize=3072000 msm_rtb.filter=0x237 service_locator.enable=1 androidboot.usbcontroller=a600000.dwc3 swiotlb=2048 printk.devkmsg=on firmware_class.path=/vendor/firmware_mnt/image loop.max_part=7"
-    BASE="0x00000000"
-    KOFFSET="0x00008000"
-    ROFFSET="0x02000000"
-    SECOFFSET="0x00000000"
-    DTBOFFSET="0x01f00000"
-    TAGSOFFSET="0x01e00000"
-    BOARD="SRPUB26A012"
-    PAGESZ="4096"
-    RAMDISK="$(pwd)/boot/ramdisk"
+
+    MKBOOTIMG="$KERNEL_DIR/mkbootimg/mkbootimg.py"
+    OUT_KERNEL="$OUT_DIR/arch/arm64/boot/Image"
+    DTB_OUT="$OUT_DIR/arch/arm64/boot/dts/dtb"
+    RAMDISK="$KERNEL_DIR/boot/ramdisk"
     MONTH="$(date +%Y-%m)"
 
-    $MKBOOTIMG \
+    python3 "$MKBOOTIMG" \
         --header_version 2 \
         --kernel "$OUT_KERNEL" \
         --ramdisk "$RAMDISK" \
         --dtb "$DTB_OUT" \
-        --cmdline "$CMDLINE" \
-        --header_version 2 \
-        --base "$BASE" \
-        --kernel_offset "$KOFFSET" \
-        --ramdisk_offset "$ROFFSET" \
-        --second_offset "$SECOFFSET" \
-        --dtb_offset "$DTBOFFSET" \
-        --tags_offset "$TAGSOFFSET" \
-        --board "$BOARD" \
-        --pagesize "$PAGESZ" \
+        --cmdline "console=null androidboot.hardware=qcom androidboot.memcg=1 lpm_levels.sleep_disabled=1 video=vfb:640x400,bpp=32,memsize=3072000 msm_rtb.filter=0x237 service_locator.enable=1 androidboot.usbcontroller=a600000.dwc3 swiotlb=2048 printk.devkmsg=on firmware_class.path=/vendor/firmware_mnt/image loop.max_part=7" \
+        --base 0x00000000 \
+        --kernel_offset 0x00008000 \
+        --ramdisk_offset 0x02000000 \
+        --second_offset 0x00000000 \
+        --dtb_offset 0x01f00000 \
+        --tags_offset 0x01e00000 \
+        --board "SRPUB26A012" \
+        --pagesize 4096 \
         --os_version 16.0.0 \
         --os_patch_level "$MONTH" \
-        --output boot.img
+        --output "$IMG_DIR/boot.img"
 }
 
 build_kernel
