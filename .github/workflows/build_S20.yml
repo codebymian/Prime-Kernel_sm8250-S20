@@ -52,5 +52,5 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: PrimeKernel-${{ matrix.device }}
+          name: Astro-Kernel-${{ matrix.device }}
           path: "*.zip"
