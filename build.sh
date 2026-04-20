@@ -59,10 +59,10 @@ build_dtb() {
     make $BUILD_VAR dtbs
 
     cat \
-        "$OUT_DIR/arch/arm64/boot/dts/samsung/kona.dtb" \
-        "$OUT_DIR/arch/arm64/boot/dts/samsung/kona-v2.dtb" \
-        "$OUT_DIR/arch/arm64/boot/dts/samsung/kona-v2.1.dtb" \
-        > "$OUT_DIR/arch/arm64/boot/dts/dtb"
+    "$OUT_DIR/arch/arm64/boot/dts/vendor/qcom/kona.dtb" \
+    "$OUT_DIR/arch/arm64/boot/dts/vendor/qcom/kona-v2.dtb" \
+    "$OUT_DIR/arch/arm64/boot/dts/vendor/qcom/kona-v2.1.dtb" \
+    > "$OUT_DIR/arch/arm64/boot/dts/dtb"
 }
 
 # -------------------------
