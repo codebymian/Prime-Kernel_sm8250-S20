@@ -16,7 +16,7 @@ build_kernel() {
     BUILD_VAR="-j$(nproc) -C $(pwd) O=$(pwd)/out ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- LLVM=1 LLVM_IAS=1"
 
     # NO_QCACLD, CNSS_WORKAROUND, SEC_PCIE*: see vendor/samsung/y2q.config
-    cat arch/arm64/configs/vendor/kona-sec-perf_defconfig arch/arm64/configs/vendor/samsung/y2q.config \
+    cat arch/arm64/configs/vendor/kona-sec-perf_defconfig arch/arm64/configs/vendor/samsung/${DEVICE}.config \
         arch/arm64/configs/ksu.config arch/arm64/configs/vendor/not/no_werror.config \
         arch/arm64/configs/vendor/debugfs.config > arch/arm64/configs/temp_defconfig
 
