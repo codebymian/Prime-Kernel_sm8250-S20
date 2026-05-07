@@ -36,13 +36,26 @@ jobs:
             zip \
             zstd
 
-      - name: Download latest Google clang
+      - name: Cache Neutron Clang
+        uses: actions/cache@v4
+        with:
+          path: neutron-clang
+          key: neutron-clang-10032024
+
+      - name: Setup Neutron Clang toolchain
         run: |
-          wget -O llvm.tar.zst https://github.com/Ylarod/setup-ndk-clang/releases/download/prebuilt/clang-linux-x86-ndk-r29-r563880c.tar.zst
-          mkdir llvm-21; cd llvm-21
-          tar -I unzstd -xf ../llvm.tar.zst
-          rm ../llvm.tar.zst
-          cd ..
+          if [ ! -d neutron-clang/bin ]; then
+              echo "Downloading Neutron Clang..."
+              mkdir -p neutron-clang
+              curl -L "https://release-assets.githubusercontent.com/github-production-release-asset/537114272/a3e58de6-4e70-406b-b3d7-1ba6f4d34078?sp=r&sv=2018-11-09&sr=b&spr=https&se=2026-05-06T01%3A05%3A41Z&rscd=attachment%3B+filename%3Dneutron-clang-10032024.tar.zst&rsct=application%2Foctet-stream&skoid=96c2d410-5711-43a1-aedd-ab1947aa7ab0&sktid=398a6654-997b-47e9-b12b-9515b896b4de&skt=2026-05-06T00%3A04%3A50Z&ske=2026-05-06T01%3A05%3A41Z&sks=b&skv=2018-11-09&sig=s%2BClsJic%2BVcIpmG5o92KVVkfqDR0ZBzCr9mIZfVsACI%3D&jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmVsZWFzZS1hc3NldHMuZ2l0aHVidXNlcmNvbnRlbnQuY29tIiwia2V5Ijoia2V5MSIsImV4cCI6MTc3ODAyOTk4MywibmJmIjoxNzc4MDI2MzgzLCJwYXRoIjoicmVsZWFzZWFzc2V0cHJvZHVjdGlvbi5ibG9iLmNvcmUud2luZG93cy5uZXQifQ.yBFsvoJ6miAkK2Mi4coOtdKv5WLAYKbWI7ApB7Hqw3A&response-content-disposition=attachment%3B%20filename%3Dneutron-clang-10032024.tar.zst&response-content-type=application%2Foctet-stream" \
+                -o neutron-clang.tar.zst
+              tar -I zstd -xf neutron-clang.tar.zst -C neutron-clang --strip-components=1
+              rm neutron-clang.tar.zst
+          fi
+          echo "PATH=$(pwd)/neutron-clang/bin:$PATH" >> $GITHUB_ENV
+          echo "KERNEL_LLVM_BIN=$(pwd)/neutron-clang/bin/clang" >> $GITHUB_ENV
+          echo "PROJECT_NAME=${{ matrix.device }}" >> $GITHUB_ENV
+          echo "PLATFORM_VERSION=11" >> $GITHUB_ENV
 
       - name: Build kernel
         run: |
