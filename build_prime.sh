@@ -27,7 +27,7 @@ export PROJECT_NAME="${DEVICE}"
 
     # NO_QCACLD, CNSS_WORKAROUND, SEC_PCIE*: see vendor/samsung/${DEVICE}.config
     cat arch/arm64/configs/vendor/kona-sec-perf_defconfig arch/arm64/configs/vendor/samsung/${DEVICE}.config \
-        arch/arm64/configs/ksu.config arch/arm64/configs/vendor/not/no_werror.config \
+        arch/arm64/configs/vendor/not/no_werror.config \
         arch/arm64/configs/vendor/debugfs.config > arch/arm64/configs/temp_defconfig
 
     echo "
