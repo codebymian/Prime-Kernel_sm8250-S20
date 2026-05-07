@@ -1,105 +1,141 @@
-#include <linux/export.h>
-#include <linux/fs.h>
-#include <linux/kobject.h>
-#include <linux/module.h>
-#include <linux/workqueue.h>
+#include "kernel_includes.h"
 
-#include "allowlist.h"
-#include "feature.h"
-#include "klog.h" // IWYU pragma: keep
-#include "throne_tracker.h"
-#include "syscall_hook_manager.h"
-#include "ksud.h"
-#include "supercalls.h"
-#include "ksu.h"
-#include "file_wrapper.h"
+// uapi
+#include "include/uapi/app_profile.h"
+#include "include/uapi/feature.h"
+#include "include/uapi/selinux.h"
+#include "include/uapi/supercall.h"
+#include "include/uapi/sulog.h"
 
-struct cred* ksu_cred;
+// includes
+#include "include/klog.h"
+#include "include/ksu.h"
 
-extern void __init ksu_lsm_hook_init(void);
-extern int ksu_handle_execveat_sucompat(int *fd, struct filename **filename_ptr,
-					void *argv, void *envp, int *flags);
-extern int ksu_handle_execveat_ksud(int *fd, struct filename **filename_ptr,
-				    void *argv, void *envp, int *flags);
-int ksu_handle_execveat(int *fd, struct filename **filename_ptr, void *argv,
-			void *envp, int *flags)
-{
-	ksu_handle_execveat_ksud(fd, filename_ptr, argv, envp, flags);
-	return ksu_handle_execveat_sucompat(fd, filename_ptr, argv, envp,
-					    flags);
-}
+// kernel compat, lite ones
+#include "infra/kernel_compat.h"
+
+#include "policy/app_profile.h"
+#include "policy/allowlist.h"
+#include "policy/feature.h"
+#include "manager/apk_sign.h"
+#include "manager/manager_identity.h"
+#include "manager/throne_tracker.h"
+#include "manager/pkg_observer.h"
+#include "supercall/internal.h"
+#include "supercall/supercall.h"
+#include "infra/su_mount_ns.h"
+#include "infra/file_wrapper.h"
+#include "infra/event_queue.h"
+#include "feature/adb_root.h"
+#include "feature/kernel_umount.h"
+#include "feature/sucompat.h"
+#include "feature/sulog.h"
+#include "runtime/ksud.h"
+#include "sulog/event.h"
+#include "sulog/fd.h"
+
+#include "selinux/selinux.h"
+#include "selinux/sepolicy.h"
+
+// selinux includes
+#include "avc_ss.h"
+#include "objsec.h"
+#include "ss/services.h"
+#include "ss/symtab.h"
+#include "xfrm.h"
+#ifndef KSU_COMPAT_USE_SELINUX_STATE
+#include "avc.h"
+#endif
+
+// unity build
+#include "policy/allowlist.c"
+#include "policy/app_profile.c"
+#include "policy/feature.c"
+#include "manager/apk_sign.c"
+#include "manager/throne_tracker.c"
+#include "manager/pkg_observer.c"
+
+#include "supercall/perm.c"
+#include "supercall/dispatch.c"
+#include "supercall/supercall.c"
+
+#include "infra/su_mount_ns.c"
+#include "infra/file_wrapper.c"
+#include "infra/event_queue.c"
+
+#ifdef CONFIG_KSU_FEATURE_ADBROOT
+#include "feature/adb_root.c"
+#endif
+#include "feature/kernel_umount.c"
+#include "feature/sucompat.c"
+#include "feature/sulog.c"
+#include "runtime/ksud.c"
+
+#include "sulog/event.c"
+#include "sulog/fd.c"
+
+#include "hook/lsm_hook.c"
+
+#include "selinux/selinux.c"
+#include "selinux/sepolicy.c"
+#include "selinux/rules.c"
+
+#include "infra/kernel_compat.c"
+
+struct cred *ksu_cred;
+
+bool allow_shell = IS_ENABLED(CONFIG_KSU_DEBUG);
+module_param(allow_shell, bool, 0);
 
 int __init kernelsu_init(void)
 {
 #ifdef CONFIG_KSU_DEBUG
-	pr_alert("*************************************************************");
-	pr_alert("**     NOTICE NOTICE NOTICE NOTICE NOTICE NOTICE NOTICE    **");
-	pr_alert("**                                                         **");
-	pr_alert("**         You are running KernelSU in DEBUG mode          **");
-	pr_alert("**                                                         **");
-	pr_alert("**     NOTICE NOTICE NOTICE NOTICE NOTICE NOTICE NOTICE    **");
-	pr_alert("*************************************************************");
+    pr_alert("*************************************************************");
+    pr_alert("**     NOTICE NOTICE NOTICE NOTICE NOTICE NOTICE NOTICE    **");
+    pr_alert("**                                                         **");
+    pr_alert("**         You are running KernelSU in DEBUG mode          **");
+    pr_alert("**                                                         **");
+    pr_alert("**     NOTICE NOTICE NOTICE NOTICE NOTICE NOTICE NOTICE    **");
+    pr_alert("*************************************************************");
 #endif
+
+    if (allow_shell) {
+        pr_alert("shell is allowed at init!");
+    }
 
     ksu_cred = prepare_creds();
     if (!ksu_cred) {
         pr_err("prepare cred failed!\n");
     }
 
-	ksu_feature_init();
+    ksu_feature_init();
 
-	ksu_supercalls_init();
+    ksu_supercalls_init();
 
-	ksu_syscall_hook_manager_init();
+    ksu_lsm_hook_init();
 
-	ksu_lsm_hook_init();
+    ksu_sucompat_init();
 
-	ksu_allowlist_init();
+    ksu_sulog_init();
 
-	ksu_throne_tracker_init();
+    ksu_adb_root_init();
 
-	ksu_ksud_init();
+    ksu_kernel_umount_init();
 
-	ksu_file_wrapper_init();
+    ksu_allowlist_init();
 
-#ifdef MODULE
-#ifndef CONFIG_KSU_DEBUG
-	kobject_del(&THIS_MODULE->mkobj.kobj);
-#endif
-#endif
-	return 0;
+    ksu_throne_tracker_init();
+
+    ksu_ksud_init();
+
+    ksu_file_wrapper_init();
+
+    return 0;
 }
+device_initcall(kernelsu_init);
 
-extern void ksu_observer_exit(void);
-void kernelsu_exit(void)
-{
-	ksu_allowlist_exit();
-
-	ksu_throne_tracker_exit();
-
-	ksu_observer_exit();
-
-	ksu_ksud_exit();
-
-	ksu_syscall_hook_manager_exit();
-
-	ksu_supercalls_exit();
-
-	ksu_feature_exit();
-
-	if (ksu_cred) {
-		put_cred(ksu_cred);
-	}
-}
-
-module_init(kernelsu_init);
-module_exit(kernelsu_exit);
-
+/*
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("weishu");
 MODULE_DESCRIPTION("Android KernelSU");
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0)
-MODULE_IMPORT_NS("VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver");
-#elif LINUX_VERSION_CODE >= KERNEL_VERSION(5, 0, 0)
-MODULE_IMPORT_NS(VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver);
-#endif
+*/
