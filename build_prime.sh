@@ -3,6 +3,10 @@
 KERNEL_DIR=$(pwd)
 DEVICE="$1"
 
+# --- Platform setup ---
+export PROJECT_NAME="${DEVICE}"
+[ -z "${PLATFORM_VERSION}" ] && export PLATFORM_VERSION=11
+
 build_kernel() {
     echo "-----------------------------------------------"
     echo "Beginning kernel compilation for $DEVICE..."
