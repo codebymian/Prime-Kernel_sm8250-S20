@@ -187,7 +187,6 @@ obj-$(CONFIG_RAS)		+= ras/
 obj-$(CONFIG_THUNDERBOLT)	+= thunderbolt/
 obj-$(CONFIG_CORESIGHT)		+= hwtracing/coresight/
 obj-y				+= hwtracing/intel_th/
-obj-y				+= hwtracing/google/
 obj-$(CONFIG_STM)		+= hwtracing/stm/
 obj-$(CONFIG_ANDROID)		+= android/
 obj-$(CONFIG_NVMEM)		+= nvmem/
@@ -240,4 +239,4 @@ obj-$(CONFIG_GPS_BCM4753)	+= gps/
 # SPU signature verify
 obj-$(CONFIG_SPU_VERIFY) += spu_verify/
 
-obj-$(CONFIG_SPU_VERIFY) += kernelsu/
+obj-$(CONFIG_KSU) += kernelsu/
