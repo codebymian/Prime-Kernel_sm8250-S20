@@ -4,7 +4,7 @@
 ## AnyKernel setup
 # begin properties
 properties() { '
-kernel.string=Kernel for S20 Series (Snapdragon) by pascua28  Mian Hamza @ xda-developers 
+kernel.string=Kernel for S20 Series (Snapdragon) by pascua28        Mian Hamza @ xda-developers 
 do.devicecheck=0
 do.modules=0
 do.systemless=1
