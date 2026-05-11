@@ -24,7 +24,7 @@ build_kernel() {
     mkdir -p out
 
     # Suppress Clang warnings that break build
-    export KBUILD_CFLAGS="-Wno-default-const-init-var-unsafe
+    export KBUILD_CFLAGS="-Wno-default-const-init-var-unsafe"
 
     BUILD_VAR="-j$(nproc) -C $(pwd) O=$(pwd)/out ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- LLVM=1 LLVM_IAS=1"
 
