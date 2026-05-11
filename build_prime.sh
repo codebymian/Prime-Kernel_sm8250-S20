@@ -3,15 +3,28 @@
 KERNEL_DIR=$(pwd)
 DEVICE="$1"
 
+# --- Toolchain setup ---
+if [ -z "$KERNEL_LLVM_BIN" ] || [ ! -x "$KERNEL_LLVM_BIN" ]; then
+    echo "Error: Neutron Clang toolchain not found in CI environment. Exiting."
+    exit 1
+fi
+
+export PATH="$(dirname "$KERNEL_LLVM_BIN"):$PATH"
+
+# --- Platform setup ---
+export PROJECT_NAME="${DEVICE}"
+[ -z "${PLATFORM_VERSION}" ] && export PLATFORM_VERSION=11
+
 build_kernel() {
     echo "-----------------------------------------------"
     echo "Beginning kernel compilation for $DEVICE..."
     echo "-----------------------------------------------"
 
     export ARCH=arm64
-    mkdir out
+    mkdir -p out
 
-    export PATH=$(pwd)/llvm-21/bin:$PATH
+    # Suppress Clang warnings that break build
+    export KBUILD_CFLAGS="-Wno-default-const-init-var-unsafe
 
     BUILD_VAR="-j$(nproc) -C $(pwd) O=$(pwd)/out ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- LLVM=1 LLVM_IAS=1"
 
