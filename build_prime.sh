@@ -2,7 +2,7 @@
 set -euo pipefail
 
 KERNEL_DIR=$(pwd)
-DEVICE="$1"
+DEVICE="$1"   # default device if not passed
 
 # --- Toolchain setup ---
 if [ -z "${KERNEL_LLVM_BIN:-}" ] || [ ! -x "$KERNEL_LLVM_BIN" ]; then
@@ -36,12 +36,12 @@ build_kernel() {
         arch/arm64/configs/vendor/debugfs.config > arch/arm64/configs/temp_defconfig
 
     cat >> arch/arm64/configs/temp_defconfig <<EOF
-# Disable LTO for stability
-CONFIG_LTO_NONE=y
-# CONFIG_THINLTO is not set
-# CONFIG_LTO_CLANG is not set
+# Enable ThinLTO for performance
+CONFIG_THINLTO=y
+CONFIG_LTO_CLANG=y
+# CONFIG_LTO_NONE is not set
 
-CONFIG_LOCALVERSION="-PrimeKernel"
+CONFIG_LOCALVERSION="-AstroKernel"
 EOF
 
     make $BUILD_VAR temp_defconfig
@@ -72,7 +72,8 @@ prepare_ak3() {
 
     sed -i "s/^device\.name1=.*/device.name1=${DEVICE}/" anykernel.sh
 
-    ZIP_NAME="Astro-Kernel-${DEVICE}.zip"
+    DATESTAMP=$(date +%Y%m%d)
+    ZIP_NAME="AstroKernel-${DEVICE}-${DATESTAMP}.zip"
     zip -r "../${ZIP_NAME}" *
     cd "$KERNEL_DIR"
 }
@@ -83,4 +84,4 @@ build_dtb
 build_dtbo
 prepare_ak3
 
-echo ">>> Build complete: Astro-Kernel-${DEVICE}.zip"
+echo ">>> Build complete: AstroKernel-${DEVICE}-$(date +%Y%m%d).zip"
