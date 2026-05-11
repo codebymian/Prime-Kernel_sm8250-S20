@@ -78,7 +78,6 @@ prepare_ak3() {
 
     ZIP_NAME="Astro-Kernel-${DEVICE}.zip"
     zip -r "../${ZIP_NAME}" *
-
     cd "$KERNEL_DIR"
 }
 
