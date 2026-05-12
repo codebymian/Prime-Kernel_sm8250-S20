@@ -84,4 +84,4 @@ build_dtb
 build_dtbo
 prepare_ak3
 
-echo ">>> Build complete: AstroKernel-${DEVICE}-$(date +%Y%m%d).zip"
+echo ">>> Build complete: AstroKernel-${DEVICE}-$(date +%Y%m%d-%H%M).zip"
