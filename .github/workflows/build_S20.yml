@@ -68,11 +68,19 @@ jobs:
 
       - name: Build kernel
         run: |
-          chmod +x build_prime.sh
-          bash build_prime.sh "${{ matrix.device }}"
+          chmod +x build_astro.sh
+          bash build_astro.sh "${{ matrix.device }}"
+
+      - name: Package artifacts
+        run: |
+          zip -r PrimeKernel-${{ matrix.device }}.zip \
+            boot.img \
+            dtbo.img \
+            out/dtb.img \
+            out/arch/arm64/boot/Image
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Astro-Kernel-${{ matrix.device }}
-          path: "*.zip"
+          name: PrimeKernel-${{ matrix.device }}
+          path: PrimeKernel-${{ matrix.device }}.zip
