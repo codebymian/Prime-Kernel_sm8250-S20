@@ -1,0 +1,78 @@
+name: Build Astro kernel
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        device: [ y2q, x1q, z3q, r8q]
+
+    steps:
+      - name: Checkout repository (with submodules)
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+          submodules: recursive   # <-- ensures mkbootimg submodule is pulled
+
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            bc \
+            bison \
+            build-essential \
+            curl \
+            dwarves \
+            flex \
+            git \
+            libelf-dev \
+            libssl-dev \
+            python3 \
+            unzip \
+            wget \
+            zip \
+            zstd
+
+      - name: Cache Neutron Clang
+        uses: actions/cache@v4
+        with:
+          path: neutron-clang
+          key: neutron-clang-10032024
+
+      - name: Setup Neutron Clang toolchain (dual-mode)
+        run: |
+          if [ ! -d neutron-clang/bin ]; then
+              echo "Downloading Neutron Clang..."
+              mkdir -p neutron-clang
+              curl -L "https://github.com/Neutron-Toolchains/clang-build-catalogue/releases/download/10032024/neutron-clang-10032024.tar.zst" \
+                -o neutron-clang.tar.zst
+              tar -I zstd -xf neutron-clang.tar.zst -C neutron-clang --strip-components=1
+              rm neutron-clang.tar.zst
+          fi
+
+          # Dual-mode environment setup
+          if [ -n "$GITHUB_ENV" ]; then
+              echo "PATH=$(pwd)/neutron-clang/bin:$PATH" >> "$GITHUB_ENV"
+              echo "KERNEL_LLVM_BIN=$(pwd)/neutron-clang/bin/clang" >> "$GITHUB_ENV"
+              echo "PROJECT_NAME=${{ matrix.device }}" >> "$GITHUB_ENV"
+              echo "PLATFORM_VERSION=11" >> "$GITHUB_ENV"
+          else
+              export PATH="$(pwd)/neutron-clang/bin:$PATH"
+              export KERNEL_LLVM_BIN="$(pwd)/neutron-clang/bin/clang"
+              export PROJECT_NAME=y2q
+              export PLATFORM_VERSION=11
+          fi
+
+      - name: Build kernel
+        run: |
+          chmod +x build_prime.sh
+          bash build_prime.sh "${{ matrix.device }}"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Astro-Kernel-${{ matrix.device }}
+          path: "*.zip"
