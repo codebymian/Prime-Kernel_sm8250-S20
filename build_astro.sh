@@ -32,6 +32,7 @@ build_kernel() {
 
     cat arch/arm64/configs/vendor/kona-sec-perf_defconfig \
         arch/arm64/configs/vendor/samsung/${DEVICE}.config \
+        arch/arm64/configs/ksu.config \
         arch/arm64/configs/vendor/debugfs.config > arch/arm64/configs/temp_defconfig
 
     cat >> arch/arm64/configs/temp_defconfig <<EOF
